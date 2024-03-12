@@ -1,0 +1,375 @@
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crew Ai</title>
+    <link rel="stylesheet" href="https://codepen.io/gymratpacks/pen/VKzBEp#0">
+    <link href='https://fonts.googleapis.com/css?family=Nunito:400,300' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+
+<body>
+    <div class="row">
+        <div class="col-md-12">
+            <section>
+                <img src="{{ url_for('static', filename='logo.png') }}" alt=""> <br><br>
+                <h1> Crew Ai by <a href="https://i8is.com/" target="_blank">I8IS</a> </h1>
+                <p>A streamlined platform for AI-driven crew management, enabling users to efficiently configure agents,
+                    assign tasks and optimize workflow with enhanced control and flexibility.</p>
+                <fieldset>
+                    <legend><span class="number">1</span> API Key</legend>
+                    <p>API key is required for accessing specialized functionalities and services.</p>
+                    {% if not session.user_id %}
+
+                    <form id="api_key_form" action="/save_api_key" method="post">
+                        <label for="api_key">Enter your API key:</label>
+                        <input type="text" id="api_key" name="api_key">
+                    </form>
+                    {% else %}
+                    <label for="api_key">Api key saved!</label>
+                    {% endif %}
+                </fieldset>
+                <fieldset>
+                    <legend><span class="number">2</span>Agents</legend>
+                    <form action="/create_agent" method="post">
+                        <label for="name">User Role:</label>
+                        <p>Specify the role of the agent, indicating their position or permissions within the system</p>
+                        <input type="text" id="role" name="role">
+
+                        <label for="goal">Goal:</label>
+                        <p>Outline the objective or purpose of the agent, providing clarity on their intended tasks.</p>
+                        <input type="text" id="goal" name="goal">
+
+                        <label for="backstory">Back Story:</label>
+                        <p>Provide background information or context regarding the agent, which inform its behavior or
+                            decisions. </p>
+                        <textarea id="backstory" name="backstory"></textarea>
+
+                        <div class="selection">
+                            <div>
+                                <label for="delegation">Allow Delegations:</label>
+                                <p>Choose whether the agent should be allowed to delegate tasks to others or not.</p>
+                                <input type="radio" name="allow_delegation" value="yes">Yes
+                                <input type="radio" name="allow_delegation" value="no">No
+                            </div>
+
+                            <div class="verbose-div">
+                                <label for="verbose">Verbose:</label>
+                                <p>Setting that controls the level of detail in the output between a concise or verbose
+                                    mode.</p>
+                                <input type="radio" name="verbose" value="yes">Yes
+                                <input type="radio" name="verbose" value="no">No
+                            </div>
+                        </div>
+                        <button type="submit" class="short-btn">ADD AGENT</button>
+                    </form>
+                </fieldset>
+
+                <fieldset>
+
+                    <legend><span class="number">3</span>Create Task</legend>
+                    <form action="/create_task" method="post">
+                        <label for="selected_agent">Select Agent:</label>
+                        <p>Choose any One agent from list of available agents for task assignment.</p>
+                        <select name="selected_agent" id="selected_agent" onchange="fetchAgentDetails()">
+                            <option value="">Select an Agent</option>
+
+                            {% for agent in agents %}
+                            <option value="{{ agent.id }}" data-role="{{ agent.role }}" data-goal="{{ agent.goal }}"
+                                data-verbose="{{ agent.verbose }}" data-backstory="{{ agent.backstory }}"
+                                data-allow-delegation="{{ agent.allow_delegation }}">{{ agent.role }}</option>
+                            {% endfor %}
+                        </select>
+                        <div id="agentDetails"></div> <br>
+
+                        <label for="task_name">Task Name:</label>
+                        <p>Enter a descriptive name for the task, adding in its identification and organization.</p>
+                        <input type="text" id="task_name" name="task_name">
+
+                        <label for="task_description">Task Description:</label>
+                        <p>Enter a detailed explanation or instructions for the task, ensuring clarity and
+                            understanding.</p>
+                        <textarea id="task_description" name="task_description"></textarea>
+                        <button class="short-btn">ADD Task</button>
+                    </form>
+                </fieldset>
+                <fieldset>
+                    <legend><span class="number">4</span>Execution Order</legend>
+                    <form id="taskForm" action="/execute_tasks" method="post">
+                        <p>You can re-arrange tasks in the order you want them to be executed, depending on
+                            prioritization and sequencing.</p>
+                        <div>
+                            <ol id="sortable-list">
+                                {% for task in tasks %}
+                                {% for agent in agents %}
+                                {% if agent.id == task.agent_id %}
+                                <li id="{{ task.id }}" draggable="true"
+                                    onclick="toggleTaskDescription(this, '{{ task.id }}')">
+                                    <div class="sort-div">
+                                        {{ task.task_name }} for {{ agent.role }}
+                                        <div>
+                                            <i class="fa-solid fa-arrow-rotate-left"
+                                                onclick="reassign('{{ task.id }}', '{{ agent.id }}')"></i>
+                                            <i class="fa-solid fa-trash" onclick="deleteTask('{{ task.id }}')"></i>
+                                        </div>
+                                    </div>
+                                    <p style="display: none;">{{ task.task_description }}</p>
+                                </li>
+                                {% endif %}
+                                {% endfor %}
+                                {% endfor %}
+                            </ol>
+                        </div>
+
+
+                        <legend><span class="number">5</span>Verbose Output Option</legend>
+                        <p>The "Text" option specifies text format for verbose output, "Console" displays output in the
+                            console, and "Both" suggests output in both text and console formats.</p>
+                        <div class="Verbose-option">
+                            <input type="radio" name="output_option" value="Text" checked>Text <p>Displays output in
+                                text format for verbose output </p>
+
+                            <input type="radio" name="output_option" value="Console">Console <p>Displays output in the
+                                console</p>
+                            <input type="radio" name="output_option" value="Both">Both <p>Displays output in both text
+                                and console formats.</p>
+
+                        </div>
+                        <button id="executed" type="button" onclick="executeTasks()">Execution</button>
+                    </form>
+                    <div id="result"></div>
+
+                </fieldset>
+
+
+            </section>
+        </div>
+    </div>
+
+</body>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Get the form element
+        var form = document.getElementById("api_key_form");
+
+        // Get the API key input element
+        var apiKeyInput = document.getElementById("api_key");
+
+        // Add event listener for input field blur (when it loses focus)
+        apiKeyInput.addEventListener("blur", function() {
+            // Get the API key from the input field
+            var apiKey = apiKeyInput.value;
+
+            // Perform any validation here if needed
+
+            // Make sure the API key is not empty
+            if (apiKey.trim() !== "") {
+                // Submit the form programmatically
+                form.submit();
+            } else {
+                // Show an error message or handle the case where the API key is empty
+                alert("Please enter a valid API key.");
+            }
+        });
+    });
+</script>
+<script>
+    function executeTasks() {
+        var taskOrder = [];
+        $("#sortable-list li").each(function () {
+            taskOrder.push($(this).attr('id'));
+        });
+
+        var outputOption = $("input[name='output_option']:checked").val();
+
+        // Disable the execution button
+        var executeButton = document.querySelector("button[type=button]"); // Adjust the selector as needed to target the execution button
+        executeButton.disabled = true;
+        executeButton.textContent = 'Executing...'; // Optional: change button text to indicate processing
+
+        $.ajax({
+            type: "POST",
+            url: "/execute_tasks",
+            contentType: "application/json",
+            data: JSON.stringify({
+                task_order: taskOrder,
+                output_option: outputOption
+            }),
+            success: function (response) {
+                // Enable the execution button again in the success callback
+                executeButton.disabled = false;
+                executeButton.textContent = 'Execute'; // Reset button text
+
+                if (response.output_option === "Console" || response.output_option === "Both") {
+                    console.log("Execution Result:", response.result); // Log to console if option is Console or Both
+                }
+                if (response.output_option === "Text" || response.output_option === "Both") {
+                    document.getElementById('result').innerText = response.result;
+                    alert("Execution Result:\n" + response.result); // Example, replace with a better display mechanism
+                }
+                if (response.encoded_zip) {
+                    downloadZip(response.encoded_zip);
+                }
+            },
+            error: function (error) {
+                console.log(error);
+                // Enable the execution button again in the error callback
+                executeButton.disabled = false;
+                executeButton.textContent = 'Execute'; // Reset button text
+            }
+        });
+    }
+
+
+    function deleteTask(taskId) {
+        if (confirm("Are you sure you want to delete this task?")) {
+            // Perform AJAX request to delete the task
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/delete_task', true);
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === XMLHttpRequest.DONE) {
+                    if (xhr.status === 200) {
+                        // Task deleted successfully
+                        // Reload the page or update the UI as needed
+                        location.reload(); // Reload the page for simplicity
+                    } else {
+                        // Error occurred while deleting task
+                        console.error('Error deleting task:', xhr.responseText);
+                    }
+                }
+            };
+            xhr.send('task_id=' + encodeURIComponent(taskId));
+        }
+    }
+    function reassign(taskId, agentId) {
+        console.log(taskId, agentId)
+        if (confirm("Do you sure you want to reassign this task?")) {
+            // Perform AJAX request to reassign the task
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/reassign_task', true);
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === XMLHttpRequest.DONE) {
+                    if (xhr.status === 200) {
+                        location.reload(); // Reload the page for simplicity
+                    } else {
+                        // Error occurred while reassigning the task
+                        console.error('Error reassigning the task:', xhr.responseText);
+                    }
+                }
+            };
+            xhr.send('task_id=' + encodeURIComponent(taskId) + '&new_agent_id=' + encodeURIComponent(agentId));
+        }
+    }
+</script>
+<script>
+    function toggleTaskDescription(element) {
+        var pElement = element.querySelector('p');
+        if (pElement) {
+            pElement.style.display = (pElement.style.display === 'none') ? 'block' : 'none';
+        }
+    }
+</script>
+<script>
+    function fetchAgentDetails() {
+        console.log("Event triggered!");  // Check if this gets logged
+        var selectedAgent = document.getElementById('selected_agent');
+        var agentDetailsDiv = document.getElementById('agentDetails');
+
+        var selectedIndex = selectedAgent.selectedIndex;
+        if (selectedIndex === 0) {
+            // Clear agent details if no agent is selected
+            agentDetailsDiv.innerHTML = '';
+            return;
+        }
+
+        var selectedOption = selectedAgent.options[selectedIndex];
+        var role = selectedOption.getAttribute('data-role');
+        var goal = selectedOption.getAttribute('data-goal');
+        var verbose = selectedOption.getAttribute('data-verbose');
+        var backstory = selectedOption.getAttribute('data-backstory');
+        var allowDelegation = selectedOption.getAttribute('data-allow-delegation');
+
+        agentDetailsDiv.innerHTML = '<h3>Agent Details</h3>' +
+            '<p><strong>Role:</strong> ' + role + '</p>' +
+            '<p><strong>Goal:</strong> ' + goal + '</p>' +
+            '<p><strong>Backstory:</strong> ' + backstory + '</p>' +
+            '<p><strong>Verbose:</strong> ' + verbose + '</p>' +
+            '<p><strong>Allow Delegation:</strong> ' + allowDelegation + '</p>';
+        ;
+    }
+</script>
+<script>
+
+    const list = document.getElementById('sortable-list');
+
+    let draggedItem = null;
+
+    list.addEventListener('dragstart', function (e) {
+        draggedItem = e.target;
+        e.target.style.opacity = '0.5'; // Make the item translucent while dragging
+    });
+
+    list.addEventListener('dragend', function (e) {
+        draggedItem.style.opacity = ''; // Reset opacity after dragging
+        draggedItem = null;
+    });
+
+    list.addEventListener('dragover', function (e) {
+        e.preventDefault(); // Allow drop
+    });
+
+    list.addEventListener('dragenter', function (e) {
+        if (e.target.tagName === 'LI') {
+            e.target.style.border = '2px dashed black'; // Highlight drop target
+        }
+    });
+
+    list.addEventListener('dragleave', function (e) {
+        if (e.target.tagName === 'LI') {
+            e.target.style.border = ''; // Remove highlight when leaving drop target
+        }
+    });
+
+    list.addEventListener('drop', function (e) {
+        if (e.target.tagName === 'LI') {
+            e.target.style.border = ''; // Remove highlight from drop target
+            if (draggedItem !== e.target) {
+                const parent = draggedItem.parentNode;
+                const nextSibling = draggedItem.nextSibling === e.target ? draggedItem : e.target.nextSibling;
+                parent.insertBefore(draggedItem, e.target);
+                parent.insertBefore(e.target, nextSibling);
+            }
+        }
+    });
+</script>
+<script>
+    function downloadZip(encodedZip) {
+        const zipBlob = base64ToBlob(encodedZip, 'application/zip');
+        const url = window.URL.createObjectURL(zipBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'results_and_code.zip';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+    }
+
+    function base64ToBlob(base64, mimeType) {
+        const byteCharacters = atob(base64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        return new Blob([byteArray], { type: mimeType });
+    }
+</script>
+
+</html>
